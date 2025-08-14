@@ -9,6 +9,7 @@ import Index from "./pages/Index";
 import CreateGame from "./pages/CreateGame";
 import GameWorkspace from "./pages/GameWorkspace";
 import Portfolio from "./pages/Portfolio";
+import ProjectDetail from "./pages/ProjectDetail";
 import NotFound from "./pages/NotFound";
 
 const queryClient = new QueryClient();
@@ -23,6 +24,7 @@ const App = () => (
         <div className="pt-16">
           <Routes>
             <Route path="/" element={<Portfolio />} />
+            <Route path="/project/:id" element={<ProjectDetail />} />
             <Route path="/create-game" element={<CreateGame />} />
             <Route path="/workspace" element={<GameWorkspace />} />
             <Route path="/engine" element={<Index />} />

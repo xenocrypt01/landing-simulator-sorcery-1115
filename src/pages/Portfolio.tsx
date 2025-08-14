@@ -1,54 +1,49 @@
-import { useState, useRef } from 'react';
-import { Upload, Download, Github, ExternalLink, Play, Code, Camera, FileText, Trash2 } from 'lucide-react';
+import { useState, useRef, useEffect } from 'react';
+import { Link } from 'react-router-dom';
+import { Upload, Download, Github, ExternalLink, Play, Code, Camera, FileText, Trash2, Share2 } from 'lucide-react';
 import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from "@/components/ui/card";
 import { Textarea } from "@/components/ui/textarea";
 import { Input } from "@/components/ui/input";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
-
-interface Project {
-  id: string;
-  title: string;
-  description: string;
-  image?: string;
-  github?: string;
-  demo?: string;
-  category: 'project' | 'tutorial' | 'advertisement';
-  date: string;
-}
+import { projectService, Project } from '@/lib/supabase';
 
 const Portfolio = () => {
-  const [projects, setProjects] = useState<Project[]>([
-    {
-      id: '1',
-      title: 'Arcade Game Engine',
-      description: 'A powerful game engine built with React and TypeScript for creating retro-style arcade games.',
-      category: 'project',
-      date: '2024-01-15',
-      github: 'https://github.com/mrsmile',
-      demo: 'https://demo.mrsmile.dev'
-    },
-    {
-      id: '2',
-      title: 'React Hooks Tutorial',
-      description: 'Complete guide to mastering React Hooks with practical examples and best practices.',
-      category: 'tutorial',
-      date: '2024-01-10'
-    }
-  ]);
+  const [projects, setProjects] = useState<Project[]>([]);
+  const [loading, setLoading] = useState(true);
   
   const [newProject, setNewProject] = useState({
     title: '',
     description: '',
     category: 'project' as const,
-    github: '',
-    demo: ''
+    github_url: '',
+    demo_url: ''
   });
   
   const [selectedFile, setSelectedFile] = useState<File | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const { toast } = useToast();
+
+  useEffect(() => {
+    loadProjects();
+  }, []);
+
+  const loadProjects = async () => {
+    try {
+      const data = await projectService.getAllProjects();
+      setProjects(data);
+    } catch (error) {
+      console.error('Error loading projects:', error);
+      toast({
+        title: "Error",
+        description: "Failed to load projects",
+        variant: "destructive"
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
 
   const handleFileSelect = (event: React.ChangeEvent<HTMLInputElement>) => {
     const file = event.target.files?.[0];
@@ -69,7 +64,7 @@ const Portfolio = () => {
     }
   };
 
-  const handleAddProject = () => {
+  const handleAddProject = async () => {
     if (!newProject.title || !newProject.description) {
       toast({
         title: "Missing information",
@@ -79,34 +74,87 @@ const Portfolio = () => {
       return;
     }
 
-    const project: Project = {
-      id: Date.now().toString(),
-      ...newProject,
-      date: new Date().toISOString().split('T')[0],
-      image: selectedFile ? URL.createObjectURL(selectedFile) : undefined
-    };
+    try {
+      let imageUrl = '';
+      if (selectedFile) {
+        imageUrl = await projectService.uploadImage(selectedFile);
+      }
 
-    setProjects([project, ...projects]);
-    setNewProject({ title: '', description: '', category: 'project', github: '', demo: '' });
-    setSelectedFile(null);
-    if (fileInputRef.current) fileInputRef.current.value = '';
-    
-    toast({
-      title: "Project added!",
-      description: "Your project has been successfully added to the portfolio"
-    });
+      const project = await projectService.createProject({
+        title: newProject.title,
+        description: newProject.description,
+        category: newProject.category,
+        github_url: newProject.github_url || undefined,
+        demo_url: newProject.demo_url || undefined,
+        image_url: imageUrl || undefined
+      });
+
+      setProjects([project, ...projects]);
+      setNewProject({ title: '', description: '', category: 'project', github_url: '', demo_url: '' });
+      setSelectedFile(null);
+      if (fileInputRef.current) fileInputRef.current.value = '';
+      
+      toast({
+        title: "Project added!",
+        description: "Your project has been successfully added to the portfolio"
+      });
+    } catch (error) {
+      console.error('Error adding project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to add project",
+        variant: "destructive"
+      });
+    }
   };
 
-  const handleDeleteProject = (id: string) => {
-    setProjects(projects.filter(p => p.id !== id));
-    toast({
-      title: "Project deleted",
-      description: "Project has been removed from your portfolio"
-    });
+  const handleDeleteProject = async (id: string) => {
+    try {
+      await projectService.deleteProject(id);
+      setProjects(projects.filter(p => p.id !== id));
+      toast({
+        title: "Project deleted",
+        description: "Project has been removed from your portfolio"
+      });
+    } catch (error) {
+      console.error('Error deleting project:', error);
+      toast({
+        title: "Error",
+        description: "Failed to delete project",
+        variant: "destructive"
+      });
+    }
+  };
+
+  const handleShareProject = async (project: Project) => {
+    const url = `${window.location.origin}/project/${project.id}`;
+    try {
+      await navigator.clipboard.writeText(url);
+      toast({
+        title: "Link copied!",
+        description: "Project link has been copied to clipboard"
+      });
+    } catch (error) {
+      toast({
+        title: "Share",
+        description: `Share this link: ${url}`,
+      });
+    }
   };
 
   const filteredProjects = (category: string) => 
     projects.filter(p => category === 'all' || p.category === category);
+
+  if (loading) {
+    return (
+      <div className="min-h-screen bg-arcade-dark flex items-center justify-center">
+        <div className="text-center">
+          <div className="w-16 h-16 border-4 border-arcade-purple border-t-transparent rounded-full animate-spin mx-auto mb-4"></div>
+          <p className="text-gray-400">Loading portfolio...</p>
+        </div>
+      </div>
+    );
+  }
 
   return (
     <div className="min-h-screen bg-arcade-dark text-white">
@@ -184,14 +232,14 @@ const Portfolio = () => {
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
               <Input
                 placeholder="GitHub URL (optional)"
-                value={newProject.github}
-                onChange={(e) => setNewProject({ ...newProject, github: e.target.value })}
+                value={newProject.github_url}
+                onChange={(e) => setNewProject({ ...newProject, github_url: e.target.value })}
                 className="bg-arcade-dark border-gray-700 text-white placeholder:text-gray-400 focus:text-white"
               />
               <Input
                 placeholder="Demo URL (optional)"
-                value={newProject.demo}
-                onChange={(e) => setNewProject({ ...newProject, demo: e.target.value })}
+                value={newProject.demo_url}
+                onChange={(e) => setNewProject({ ...newProject, demo_url: e.target.value })}
                 className="bg-arcade-dark border-gray-700 text-white placeholder:text-gray-400 focus:text-white"
               />
             </div>
@@ -240,18 +288,24 @@ const Portfolio = () => {
                 {filteredProjects(category).map((project) => (
                   <Card key={project.id} className="bg-arcade-terminal border-gray-800 hover:border-arcade-purple transition-colors group">
                     <CardHeader className="pb-2">
-                      {project.image && (
-                        <div className="aspect-video rounded-lg overflow-hidden mb-4">
-                          <img
-                            src={project.image}
-                            alt={project.title}
-                            className="w-full h-full object-cover group-hover:scale-105 transition-transform"
-                          />
-                        </div>
+                      {project.image_url && (
+                        <Link to={`/project/${project.id}`} className="block">
+                          <div className="aspect-video rounded-lg overflow-hidden mb-4">
+                            <img
+                              src={project.image_url}
+                              alt={project.title}
+                              className="w-full h-full object-cover group-hover:scale-105 transition-transform"
+                            />
+                          </div>
+                        </Link>
                       )}
                       <div className="flex items-start justify-between">
                         <div className="flex-1">
-                          <CardTitle className="text-lg mb-1">{project.title}</CardTitle>
+                          <Link to={`/project/${project.id}`}>
+                            <CardTitle className="text-lg mb-1 hover:text-arcade-purple transition-colors">
+                              {project.title}
+                            </CardTitle>
+                          </Link>
                           <div className="flex items-center space-x-2">
                             <span className={`px-2 py-1 rounded-full text-xs font-medium ${
                               project.category === 'project' ? 'bg-arcade-purple/20 text-arcade-purple' :
@@ -263,17 +317,29 @@ const Portfolio = () => {
                               {project.category === 'advertisement' && <Camera className="inline mr-1 h-3 w-3" />}
                               {project.category}
                             </span>
-                            <span className="text-xs text-gray-400">{project.date}</span>
+                            <span className="text-xs text-gray-400">
+                              {new Date(project.created_at).toLocaleDateString()}
+                            </span>
                           </div>
                         </div>
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleDeleteProject(project.id)}
-                          className="text-gray-400 hover:text-red-400"
-                        >
-                          <Trash2 className="h-4 w-4" />
-                        </Button>
+                        <div className="flex space-x-1">
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleShareProject(project)}
+                            className="text-gray-400 hover:text-arcade-purple"
+                          >
+                            <Share2 className="h-4 w-4" />
+                          </Button>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            onClick={() => handleDeleteProject(project.id)}
+                            className="text-gray-400 hover:text-red-400"
+                          >
+                            <Trash2 className="h-4 w-4" />
+                          </Button>
+                        </div>
                       </div>
                     </CardHeader>
                     <CardContent>
@@ -281,18 +347,27 @@ const Portfolio = () => {
                         {project.description}
                       </CardDescription>
                       <div className="flex space-x-2">
-                        {project.github && (
-                          <Button variant="outline" size="sm" className="border-gray-700 hover:border-arcade-purple">
-                            <Github className="mr-1 h-3 w-3" />
-                            Code
-                          </Button>
+                        {project.github_url && (
+                          <a href={project.github_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className="border-gray-700 hover:border-arcade-purple">
+                              <Github className="mr-1 h-3 w-3" />
+                              Code
+                            </Button>
+                          </a>
                         )}
-                        {project.demo && (
-                          <Button variant="outline" size="sm" className="border-gray-700 hover:border-arcade-purple">
-                            <ExternalLink className="mr-1 h-3 w-3" />
-                            Demo
-                          </Button>
+                        {project.demo_url && (
+                          <a href={project.demo_url} target="_blank" rel="noopener noreferrer">
+                            <Button variant="outline" size="sm" className="border-gray-700 hover:border-arcade-purple">
+                              <ExternalLink className="mr-1 h-3 w-3" />
+                              Demo
+                            </Button>
+                          </a>
                         )}
+                        <Link to={`/project/${project.id}`}>
+                          <Button variant="outline" size="sm" className="border-gray-700 hover:border-arcade-purple">
+                            View Details
+                          </Button>
+                        </Link>
                       </div>
                     </CardContent>
                   </Card>
