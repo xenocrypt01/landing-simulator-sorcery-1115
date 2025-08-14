@@ -161,16 +161,16 @@ const Portfolio = () => {
                 placeholder="Project Title"
                 value={newProject.title}
                 onChange={(e) => setNewProject({ ...newProject, title: e.target.value })}
-                className="bg-arcade-dark border-gray-700"
+                className="bg-arcade-dark border-gray-700 text-white placeholder:text-gray-400 focus:text-white"
               />
               <select
                 value={newProject.category}
                 onChange={(e) => setNewProject({ ...newProject, category: e.target.value as any })}
-                className="bg-arcade-dark border border-gray-700 rounded-md px-3 py-2 text-white"
+                className="bg-arcade-dark border border-gray-700 rounded-md px-3 py-2 text-white focus:text-white focus:outline-none focus:ring-2 focus:ring-arcade-purple"
               >
-                <option value="project">Project</option>
-                <option value="tutorial">Tutorial</option>
-                <option value="advertisement">Advertisement</option>
+                <option value="project" className="bg-arcade-dark text-white">Project</option>
+                <option value="tutorial" className="bg-arcade-dark text-white">Tutorial</option>
+                <option value="advertisement" className="bg-arcade-dark text-white">Advertisement</option>
               </select>
             </div>
             
@@ -178,7 +178,7 @@ const Portfolio = () => {
               placeholder="Project Description"
               value={newProject.description}
               onChange={(e) => setNewProject({ ...newProject, description: e.target.value })}
-              className="bg-arcade-dark border-gray-700"
+              className="bg-arcade-dark border-gray-700 text-white placeholder:text-gray-400 focus:text-white min-h-[100px]"
             />
             
             <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -186,13 +186,13 @@ const Portfolio = () => {
                 placeholder="GitHub URL (optional)"
                 value={newProject.github}
                 onChange={(e) => setNewProject({ ...newProject, github: e.target.value })}
-                className="bg-arcade-dark border-gray-700"
+                className="bg-arcade-dark border-gray-700 text-white placeholder:text-gray-400 focus:text-white"
               />
               <Input
                 placeholder="Demo URL (optional)"
                 value={newProject.demo}
                 onChange={(e) => setNewProject({ ...newProject, demo: e.target.value })}
-                className="bg-arcade-dark border-gray-700"
+                className="bg-arcade-dark border-gray-700 text-white placeholder:text-gray-400 focus:text-white"
               />
             </div>
 
